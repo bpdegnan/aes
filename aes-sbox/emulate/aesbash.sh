@@ -518,7 +518,95 @@ function aes_subbyteinv()
   echo "$resmuli"
 }
 
+#
+# aes_roundconstant() creates the round key constant, and takes two arguments
+# The first is the last number in the series and the second is "0" for up and "1" for down
+#
+aes_roundconstant()
+{
+  isom=$1
+  isom_inputsize=${#isom}  #get the length, it should be 8
+  isom_inputmaxsize=8
+  if [ "$isom_inputsize" -ne "$isom_inputmaxsize" ]; then
+    echoerr "ERROR, ${FUNCNAME[0]} failed due to isom_inputsize != $isom_inputmaxsize ($isom_inputsize) " 
+    exit -1
+  fi
+  isom_mode=$2
 
+ rc7i=${isom:0:1}
+ rc6i=${isom:1:1}  
+ rc5i=${isom:2:1}  
+ rc4i=${isom:3:1}  
+ rc3i=${isom:4:1}  
+ rc2i=${isom:5:1}  
+ rc1i=${isom:6:1}  
+ rc0i=${isom:7:1}    
+
+ #the feedback line
+ if [ "$isom_mode" == "0" ]; then
+   fback=$rc7i #encyption
+ else
+   fback=$rc4i #decryption
+ fi
+ 
+ #shift the register
+ rc7=$rc6i 
+ rc6=$rc5i 
+ rc5=$rc4i 
+ rc4=$(bashXORbinstring $rc3i $fback)
+
+ if [ "$isom_mode" == "0" ]; then
+  #encyption
+  rc3=$(bashXORbinstring $rc2i $fback)
+  rc2=$rc1i
+ else
+ #decryption
+  rc3=$rc2i
+  rc2=$(bashXORbinstring $rc1i $fback)
+ fi
+ rc1=$(bashXORbinstring $rc0i $fback)
+ rc0=$rc7i
+ 
+ echo "$rc7$rc6$rc5$rc4$rc3$rc2$rc1$rc0" 
+ 
+}
+
+#
+# aes_RotWord() rotates the 32-bit word by 8bits 
+# I could use the bashbignumbers functions but instead I am using a fixed 8-bit version
+#
+
+aes_RotWord()
+{
+  isom=$1
+  isom_inputsize=${#isom}  #get the length
+  isom_inputmaxsize=32
+  if [ "$isom_inputsize" -ne "$isom_inputmaxsize" ]; then
+    echoerr "ERROR, ${FUNCNAME[0]} failed due to isom_inputsize != $isom_inputmaxsize ($isom_inputsize) " 
+    exit -1
+  fi
+  
+  isom_mode=$2
+  let BITOFFSET=8
+  
+if [ "$isom_mode" == "0" ]; then  
+  #bit based operation on an ascii encoded binary word
+  #Take the byte on the left and put it on the right
+
+  let STRLSB=isom_inputsize-BITOFFSET  #there should be 32 bits, so this is 8 bits down
+  LEFTBITS=${isom:0:BITOFFSET}
+  REMAIN=${isom:BITOFFSET:$STRLSB}
+  STRCONSTRUCT="$REMAIN$LEFTBITS"
+else  
+  #decryption we take the byte on the right and put it to the left.
+  let STRLSB=isom_inputsize-BITOFFSET  #there should be 32 bits, so this is 8 bits down
+  RIGHTBITS=${isom:STRLSB:isom_inputsize}
+  REMAIN=${isom:0:STRLSB}
+  STRCONSTRUCT="$RIGHTBITS$REMAIN"
+fi  
+  printf '%s' "$STRCONSTRUCT"  
+
+}
 
 function help() # Show a list of functions
 {
@@ -537,8 +625,8 @@ function helplatex()
 #
 # get the dependencies for this file
 
-#helplatex
- aesbash_verdep
+# helplatex
+# aesbash_verdep
 
 #aes_multiplicativeinversion "00000100"
 #aes_affine "11001011"
