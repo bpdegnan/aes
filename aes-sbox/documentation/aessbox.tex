@@ -684,13 +684,13 @@ The multiplicative inverse can be computed using the equation,
 \begin{align}
 \label{eqn:multiplicativeinversionlong}
 \left(n_1x+n_0\right)^{-1}&=n_1\left(n_1^2B+ n_1n_0A+n_0^2\right)^{-1}x \nonumber \\
-&+\left(n_0x+n_1A\right)\left(n_1^2B+n_1n_0A+n_0^2\right)^{-1}
+&+\left(n_0+n_1A\right)\left(n_1^2B+n_1n_0A+n_0^2\right)^{-1}
 \end{align} 
 This equation can then be reduced because any polynomial can be represented as \(n_1x+n_0\) with the irreducible polynomial of \(x^2+Ax+B\).  By selecting \(A=1\) and \(B=\lambda\), the irreducible polynomial becomes \(x^2+x+\lambda\), and allows (\ref{eqn:multiplicativeinversionlong}) to be reduced to
 \begin{align}
 \label{eqn:multiplicativeinversionreduced}
 \left(n_1x+n_0\right)^{-1}&=n_1\left(n_1^2\lambda+ n_0\left(n_1+n_0\right)\right)^{-1}x \nonumber \\
-&+\left(n_0x+n_1\right)\left(n_1^2\lambda+n_0\left(n_1+n_0\right)\right)^{-1}.
+&+\left(n_0+n_1\right)\left(n_1^2\lambda+n_0\left(n_1+n_0\right)\right)^{-1}.
 \end{align}
 In equation (\ref{eqn:multiplicativeinversionreduced}), the arithmetic operations are the addition, multiplication, squaring and a multiplicative inversion on a \(GF(2^4)\) field.  The implementation result is the circuit illustrated in Figure \ref{fig:multiplicativeinversion}; however, the computation of the multiplicative inverse cannot be directly applied to an element based on \(GF(2^8)\) without first mapping it to an isomorphic function, \(\delta\).  The output is then remapped after the multiplicative inversion by the inverse isomorphic function, \(\delta^{-1}\).  
 \begin{figure}[t]
