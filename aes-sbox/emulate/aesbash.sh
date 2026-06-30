@@ -8,7 +8,12 @@
 #
 
 BIGNUMBERS=bashbignumbers.sh
-URL_BIGNUMBERS="https://raw.githubusercontent.com/bpdegnan/bashbignumbers/master/bashbignumbers.sh"
+#The dependency is pinned to a specific commit so runs are reproducible and the
+#download can be integrity-checked.  Update BIGNUMBERS_PIN and BIGNUMBERS_SHA256
+#together whenever you want a newer bashbignumbers.sh.
+BIGNUMBERS_PIN="0b1eebec6299ca9c0b60d1166504590ee46bdd94"
+BIGNUMBERS_SHA256="3c18a8dc42099208bb27a8c136e2b17ef3eeae91d586687b33b35308a30c47f5"
+URL_BIGNUMBERS="https://raw.githubusercontent.com/bpdegnan/bashbignumbers/$BIGNUMBERS_PIN/bashbignumbers.sh"
 
 #I changed the name from aesbash_verify_dependencies to aesbash_verdep
 #this function is for backwards compatibility.   it is not in the help manifest because
@@ -18,42 +23,74 @@ aesbash_verify_dependencies()
  aesbash_verdep $@
 }
 
-##  aesbash_verdep().  I will assume that we will be using the number library 
+## aesbash_sha256file() prints the sha256 hex digest of a file, trying the
+## common tools in turn.  It validates that each tool produced a 64-char hex
+## digest before accepting it, so a gated/broken tool falls through to the next.
+function aesbash_sha256file()
+{
+  aesbash_f="$1"
+  aesbash_h=""
+  if hash shasum 2>/dev/null; then
+    aesbash_h="$(shasum -a 256 "$aesbash_f" 2>/dev/null | cut -d' ' -f1)"
+  fi
+  if [ ${#aesbash_h} -ne 64 ] && hash sha256sum 2>/dev/null; then
+    aesbash_h="$(sha256sum "$aesbash_f" 2>/dev/null | cut -d' ' -f1)"
+  fi
+  if [ ${#aesbash_h} -ne 64 ] && hash openssl 2>/dev/null; then
+    aesbash_h="$(openssl dgst -sha256 "$aesbash_f" 2>/dev/null | awk '{print $NF}')"
+  fi
+  printf '%s' "$aesbash_h"
+}
+
+##  aesbash_verdep().  I will assume that we will be using the number library
 function aesbash_verdep() # Check and download dependencies
 # aesbash_verdep & 0 & 0 & check and download deps.\\ \hline
 {
-FLAG_FETCH=0
-#check for bignumbers
-if [ ! -f $BIGNUMBERS ]; then
-    printf 'Dependency, %s, not found!  Attempting to fetch...\n' "$BIGNUMBERS"
+#anchor the dependency to the script directory, not the current directory, so it
+#is found/fetched in one place regardless of where the test is invoked from.
+BIGNUMBERS_PATH="$PATH_SCRIPT/$BIGNUMBERS"
+
+#Fetch when the file is missing, or when a cached copy does not match the pinned
+#checksum (e.g. a stale download from a previous commit) so the cache self-heals.
+if [ ! -f "$BIGNUMBERS_PATH" ]; then
+    printf 'Dependency, %s, not found!  Attempting to fetch pinned commit %s...\n' "$BIGNUMBERS" "$BIGNUMBERS_PIN"
+elif [ "$(aesbash_sha256file "$BIGNUMBERS_PATH")" != "$BIGNUMBERS_SHA256" ]; then
+    printf 'Dependency, %s, does not match pinned commit %s; refetching...\n' "$BIGNUMBERS" "$BIGNUMBERS_PIN" >&2
+fi
+if [ ! -f "$BIGNUMBERS_PATH" ] || [ "$(aesbash_sha256file "$BIGNUMBERS_PATH")" != "$BIGNUMBERS_SHA256" ]; then
     #bash has hash, otherwise, I'd use command -v
     if hash wget 2>/dev/null; then
-      FLAG_FETCH=1
-      wget $URL_BIGNUMBERS
+      wget -O "$BIGNUMBERS_PATH" "$URL_BIGNUMBERS"
       printf '\nUsed wget to fetch %s\n' "$BIGNUMBERS"
     elif hash curl 2>/dev/null; then
-      FLAG_FETCH=2
-      curl -O $URL_BIGNUMBERS
-      printf '\nUsed curl to fetch %s \n'"$BIGNUMBERS"
+      curl -fSL -o "$BIGNUMBERS_PATH" "$URL_BIGNUMBERS"
+      printf '\nUsed curl to fetch %s\n' "$BIGNUMBERS"
     else
-      echo "File, $BIGNUMBERS, could not be acquired!"
-      echo "Furthermore, wget and curl not found to get it from:"
-      echo "$URL_BIGNUMBERS"
-      exit
+      printf 'File, %s, could not be acquired!\n' "$BIGNUMBERS" >&2
+      printf 'Furthermore, wget and curl not found to get it from:\n' >&2
+      printf '%s\n' "$URL_BIGNUMBERS" >&2
+      return 1
     fi
 fi
 
 #hopefully, we have it but if we don't, check again.
-if [ ! -f $BIGNUMBERS ]; then
-  echo "File, $BIGNUMBERS, not found!"
-  exit
-else
-  #load big numbers
-  source "$BIGNUMBERS"
+if [ ! -f "$BIGNUMBERS_PATH" ]; then
+  printf 'File, %s, not found!\n' "$BIGNUMBERS" >&2
+  return 1
 fi
 
+#verify the integrity of the dependency against the pinned checksum before use
+aesbash_actualsha="$(aesbash_sha256file "$BIGNUMBERS_PATH")"
+if [ "$aesbash_actualsha" != "$BIGNUMBERS_SHA256" ]; then
+  printf 'Integrity check FAILED for %s\n' "$BIGNUMBERS_PATH" >&2
+  printf '  expected: %s\n' "$BIGNUMBERS_SHA256" >&2
+  printf '  actual:   %s\n' "$aesbash_actualsha" >&2
+  printf 'Refusing to load an unverified dependency.\n' >&2
+  return 1
+fi
 
-
+#load big numbers
+source "$BIGNUMBERS_PATH"
 }
 
 ## aes_affineinv calculates the affine trassform inversion in the manner outlined in the document.

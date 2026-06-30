@@ -1,1 +1,4 @@
 notes.txt
+
+# Runtime-fetched, pinned dependency (see aes-sbox/emulate/aesbash.sh)
+aes-sbox/emulate/bashbignumbers.sh
