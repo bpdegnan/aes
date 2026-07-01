@@ -15,6 +15,11 @@
 % \documentclass[journal]{../sty/IEEEtran}
 
 
+% T1 encoding provides \textquotedbl, needed for the " character that the
+% listings package emits inside the bash code examples (OT1 lacks it).
+% (Original Computer Modern is kept as Type 1 via the installed cm-super fonts.)
+\usepackage[T1]{fontenc}
+
 % *** CITATION PACKAGES ***
 %
 \usepackage{cite}
@@ -22,12 +27,12 @@
 \usepackage{multirow,hhline}
 \usepackage{booktabs,xcolor,siunitx,colortbl} %color cells
 \usepackage{makecell}  %bold lines
-\usepackage{units}  %nice fraction
+\usepackage{nicefrac}  %nice fractions (standalone; the old units pkg conflicts with siunitx)
 \usepackage[numbered]{mcode}
 \usepackage{amsmath,amssymb,latexsym,float,epsfig}
 \usepackage{upgreek,mathtools}
 %\usepackage{flushend}
-\usepackage{slashbox}
+\usepackage{diagbox}
 \usepackage{comment}
 \usepackage{listings}
 %the subcaption package overwrites the caption size, so you need the follow-on command
@@ -233,7 +238,7 @@ GA, 30332 USA e-mail: (see http://www.propagation.gatech.edu/).}% <-this % stops
 % As a general rule, do not put math, special symbols or citations
 % in the abstract or keywords.
 \begin{abstract}
-The Advanced Encryption Standard (AES) is a specification for the encryption of electronic data.  The substitution-permutation network architecture of AES uses the irreducible polynomial of  \(x^8+x^4+x^3+x+1\) that provides a non-linear permutations for the cipher.  In this work, we describe the complete circuits and reductions required to implement a non-lookup table based S-Box in hardware for the AES irreducible polynomial in order to create a reference for comparisons.  The verification script is written in the BASH shell so that they can be easily modified for integration to different simulation and verification tools. \end{abstract}
+The Advanced Encryption Standard (AES) is a specification for the encryption of electronic data.  The substitution-permutation network architecture of AES uses the irreducible polynomial of  \(x^8+x^4+x^3+x+1\) that provides non-linear permutations for the cipher.  In this work, we describe the complete circuits and reductions required to implement a non-lookup table based S-Box in hardware for the AES irreducible polynomial in order to create a reference for comparisons.  The verification script is written in the BASH shell so that they can be easily modified for integration to different simulation and verification tools. \end{abstract}
 
 % Note that keywords are not normally used for peerreview papers.
 \begin{IEEEkeywords}
@@ -241,10 +246,10 @@ AES, block cipher, simulation, RFID, IoT
 \end{IEEEkeywords}
 
 \section*{Motivation}
-The Advanced Encryption Standard (AES) is a block cipher based on a substitution-permutation network\cite{fips197}.  Although the AES cipher has been approved for over 20 years, we were unable to find a hardware implementation reference that was suitable for comparisons against lightweight ciphers. This document attempts a minimal ``nothing up the sleeves'' transistor implementation of the non-linear component of AES, the S-Box.  This work attempts to be the concisely written culmination of many other AES implementations.  There is very little, if any, novel content in this document; however, as we were unable to explicitly find the information required for a research, and this document was created.  Our focus of research includes power constrained devices, and the bulk of AES implementations use lookup tables for the Galois Field logic substitutions, or do not clearly explain the circuit implementation\cite{rudra2001efficient,wang2014application,gueron2016hardware}.  This work attempts to be a complete description and verification for AES targeting a custom semiconductor implementation that does not use lookup tables.  The work is based off of the optimized S-Box by the AES authors \cite{rijmen2000efficient} combined with an approach alluded to by Satoh et al \cite{satoh2001compact}.  This work extends previous work by complete mathematical descriptions, circuit logic implementations, and logic verification scripts.
+The Advanced Encryption Standard (AES) is a block cipher based on a substitution-permutation network\cite{fips197}.  Although the AES cipher has been approved for over 20 years, we were unable to find a hardware implementation reference that was suitable for comparisons against lightweight ciphers. This document attempts a minimal ``nothing up the sleeves'' transistor implementation of the non-linear component of AES, the S-Box.  This work attempts to be the concisely written culmination of many other AES implementations.  There is very little, if any, novel content in this document; however, as we were unable to explicitly find the information required for our research, this document was created.  Our focus of research includes power constrained devices, and the bulk of AES implementations use lookup tables for the Galois Field logic substitutions, or do not clearly explain the circuit implementation\cite{rudra2001efficient,wang2014application,gueron2016hardware}.  This work attempts to be a complete description and verification for AES targeting a custom semiconductor implementation that does not use lookup tables.  The work is based off of the optimized S-Box by the AES authors \cite{rijmen2000efficient} combined with an approach alluded to by Satoh et al \cite{satoh2001compact}.  This work extends previous work by complete mathematical descriptions, circuit logic implementations, and logic verification scripts.
 
 \section{AES}
-The AES algorithm is a block cipher that uses a 128, 192, or 256 bit keys to operation on a block of 128 bits of data.  The shorthand notation for these configurations are AES128/128, AES128/192 and AES128/256 and the algorithm uses \(n\) rounds that are 10, 12, and 14 respectively.  The AES algorithm is not the focus of this work, but the S-Box that underpins the non-linearity that is used in the cipher, which is the irreducible polynomial of \(x^8+x^4+x^3+x+1\).
+The AES algorithm is a block cipher that uses a 128, 192, or 256 bit keys to operate on a block of 128 bits of data.  The shorthand notation for these configurations are AES128/128, AES128/192 and AES128/256 and the algorithm uses \(n\) rounds that are 10, 12, and 14 respectively.  The AES algorithm is not the focus of this work, but the S-Box that underpins the non-linearity that is used in the cipher, which is the irreducible polynomial of \(x^8+x^4+x^3+x+1\).
 
 \subsection{Review GF(2) Polynomials}
 As a review of GF(2) polynomials used in this work, GF(2) polynomials represent rings of numbers.  As an example, the mapping of coefficients to numbers for \(x^2+x+1\) is given by the following table:
@@ -275,7 +280,7 @@ GF(2^2)&\rightarrow GF(2)&:x^2+x+1\nonumber \\
 GF((2^2)^2)&\rightarrow GF(2^2)&:x^2+x+\varphi\\
 GF(((2^2)^2)^2)&\rightarrow GF((2^2)^2)&:x^2+x+\lambda \nonumber
 \end{align}
-where \(\varphi=\{10\}_2\) and \(\lambda=\{1100\}_2\).  As previously stated, \(GF(2^2)\) polynomials can be decomposed to lower-order composite fields where \(n_1x+n_0\).  Therefore, and binary number, \(k\), can be split into \(k_Hx+k_L\).  As an example, for \(k=\{1001\}_2\), the value \(k\) is \(k_Hx+k_L\), resulting in 
+where \(\varphi=\{10\}_2\) and \(\lambda=\{1100\}_2\).  As previously stated, \(GF(2^2)\) polynomials can be decomposed to lower-order composite fields where \(n_1x+n_0\).  Therefore, any binary number, \(k\), can be split into \(k_Hx+k_L\).  As an example, for \(k=\{1001\}_2\), the value \(k\) is \(k_Hx+k_L\), resulting in 
 \(\{10\}_2x+\{01\}_2\), which can be further reduced to \(\{1\}_2x+\{0\}_2\) and \(\{0\}_2x+\{1\}_2\) as high and low terms.
 
 
@@ -287,6 +292,7 @@ the AES S-Box has been implemented as a virtual logic implementation through the
  \caption{Script functions that emulate hardware blocks}
   \label{tab:aesbash}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{|@{\hskip3pt}l@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}l@{\hskip3pt}|}
 \hline
  &  & bit & \\
@@ -307,7 +313,8 @@ function & args & width & description\\
  aes\_subbyteinv & 1 & 8 & inverse subbyte calculation\\ \hline
  aesbash\_verdep & 0 & 0 & check and download deps.\\ \hline
  helplatex & 0 & 0 & autogenerate this table\\ \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 
@@ -322,8 +329,8 @@ The AES S-Box is based on a non-linear boolean function that replaces an element
 \\
 \subcaptionbox{\label{fig:aes-invsubbyte}}{\includegraphics[width=2.8in]{eps/aes-invsubbyte.eps}} \\
 \end{tabular}
-\label{fig:hasharch}
 \caption{An illustration of the S-Box architecture is presented.  (a) is the Subbyte calculation used in encryption that consists of a multiplicative inversion to an affine transform.  (b) is the InvSubbyte calculation used in decryption that consists of an inverse affine transform to the multiplicative inversion module. }
+\label{fig:hasharch}
 \end{figure}
 
 \subsection{SubByte}
@@ -334,8 +341,9 @@ The SubByte is computed by calculating the Multiplicative Inversion in \(GF(2^8)
   \label{tab:subbyte}
 \centering
 %autogenerated by aestest_subbytetable via aestest_subbytetable.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
- & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
+\diagbox{}{} & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
  \hline
 00 &63 & 7c & 77 & 7b & f2 & 6b & 6f & c5 & 30 & 01 & 67 & 2b & fe & d7 & ab & 76 \\ 
  \hline
@@ -369,7 +377,8 @@ e0 &e1 & f8 & 98 & 11 & 69 & d9 & 8e & 94 & 9b & 1e & 87 & e9 & ce & 55 & 28 & d
  \hline
 f0 &8c & a1 & 89 & 0d & bf & e6 & 42 & 68 & 41 & 99 & 2d & 0f & b0 & 54 & bb & 16 \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 The pre-calculated values for the SubByte function are reported in Table \ref{tab:subbyte}, and this output was automatically generated by the script   {aestest\_subbytetable.sh}, which iterates through every input.  A single input can be evaluated by 
 \begin{lstlisting}[language=bash]
@@ -377,7 +386,7 @@ The pre-calculated values for the SubByte function are reported in Table \ref{ta
 source aesbash.sh
 aes_subbyte "00100000"
 \end{lstlisting}
-where ``00100000" is the function input, resulting in the output of ``10110111".
+where ``00100000'' is the function input, resulting in the output of ``10110111''.
 
 
 \subsection{Affine Transformation}
@@ -456,8 +465,9 @@ where each ``1'' in the transform field corresponds to an XOR, which results in 
   \label{tab:aesaffinetransform}
 \centering
 %autogenerated by aestest_affine via aestest_affine.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
- & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
+\diagbox{}{} & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
  \hline
 00 &63 & 7c & 5d & 42 & 1f & 00 & 21 & 3e & 9b & 84 & a5 & ba & e7 & f8 & d9 & c6 \\ 
  \hline
@@ -491,7 +501,8 @@ e0 &c8 & d7 & f6 & e9 & b4 & ab & 8a & 95 & 30 & 2f & 0e & 11 & 4c & 53 & 72 & 6
  \hline
 f0 &39 & 26 & 07 & 18 & 45 & 5a & 7b & 64 & c1 & de & ff & e0 & bd & a2 & 83 & 9c \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 The pre-calculated values for the affine transform are reported in Table \ref{tab:aesaffinetransform}, and this output was automatically generated by the script {aestest\_affine.sh}, which iterates through every input.  A single input can be evaluated by 
 \begin{lstlisting}[language=bash]
@@ -499,7 +510,7 @@ The pre-calculated values for the affine transform are reported in Table \ref{ta
 source aesbash.sh
 aes_affine "01000010"
 \end{lstlisting}
-where ``01000010" is the function input, resulting in the output of ``10011010".
+where ``01000010'' is the function input, resulting in the output of ``10011010''.
 
 \subsection{InvSubByte}
 The InvSubByte is computed by calculating the inverse affine transformation, \(Afi\), described in Section \ref{sec:invaffinetransform} and then the Multiplicative Inversion in \(GF(2^8)\) as described in Section \ref{sec:multiplicativeinversionmodule}, where an 8-bit input becomes an 8-bit output. 
@@ -509,8 +520,9 @@ The InvSubByte is computed by calculating the inverse affine transformation, \(A
   \label{tab:invsubbyte}
 \centering
 %autogenerated by aestest_subbyteinvtable via aestest_subbyteinvtable.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
- & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
+\diagbox{}{} & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
  \hline
 00 &52 & 09 & 6a & d5 & 30 & 36 & a5 & 38 & bf & 40 & a3 & 9e & 81 & f3 & d7 & fb \\ 
  \hline
@@ -544,7 +556,8 @@ e0 &a0 & e0 & 3b & 4d & ae & 2a & f5 & b0 & c8 & eb & bb & 3c & 83 & 53 & 99 & 6
  \hline
 f0 &17 & 2b & 04 & 7e & ba & 77 & d6 & 26 & e1 & 69 & 14 & 63 & 55 & 21 & 0c & 7d \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 The pre-calculated values for the InvSubByte function are reported in Table \ref{tab:invsubbyte}, and this output was automatically generated by the script   {aestest\_subbyteinvtable.sh}, which iterates through every input.  A single input can be evaluated by 
@@ -553,7 +566,7 @@ The pre-calculated values for the InvSubByte function are reported in Table \ref
 source aesbash.sh
 aes_subbyteinv "00100000"
 \end{lstlisting}
-where ``00100000" is the function input, resulting in the output of ``01010100".
+where ``00100000'' is the function input, resulting in the output of ``01010100''.
 
 
 \subsection{Inverse Affine}
@@ -563,10 +576,10 @@ The inverse affine transform is defined by:
 \label{eqn:affi}
 Afi(a) = \left(
  \begin{array}{@{\hskip2pt}c@{\hskip2pt}@{\hskip2pt}c@{\hskip2pt}@{\hskip2pt}c@{\hskip2pt}@{\hskip2pt}c@{\hskip2pt}@{\hskip2pt}c@{\hskip2pt}@{\hskip2pt}c@{\hskip2pt}@{\hskip2pt}c@{\hskip2pt}@{\hskip2pt}c@{\hskip2pt}}
-  0 & 1 & 1 & 1 & 0 & 0 & 1 & 0 \\
+  0 & 1 & 0 & 1 & 0 & 0 & 1 & 0 \\
   0 & 0 & 1 & 0 & 1 & 0 & 0 & 1 \\
   1 & 0 & 0 & 1 & 0 & 1 & 0 & 0 \\
-  0 & 0 & 0 & 1 & 1 & 1 & 1 & 1 \\
+  0 & 1 & 0 & 0 & 1 & 0 & 1 & 0 \\
   0 & 0 & 1 & 0 & 0 & 1 & 0 & 1 \\
   1 & 0 & 0 & 1 & 0 & 0 & 1 & 0 \\
   0 & 1 & 0 & 0 & 1 & 0 & 0 & 1 \\
@@ -623,7 +636,7 @@ Afi(a) =
   \multicolumn{8}{c}{a_7 \oplus a_5 \oplus a_2 \oplus 1} \\
  \end{pmatrix},
 \end{align}
-where each ``1" in the transform field corresponds to an XOR, which results in the logic shown in equation (\ref{matrix:affinei}).
+where each ``1'' in the transform field corresponds to an XOR, which results in the logic shown in equation (\ref{matrix:affinei}).
 
 
 \begin{table}[t]
@@ -631,8 +644,9 @@ where each ``1" in the transform field corresponds to an XOR, which results in t
   \label{tab:aesaffinetransforminvs}
 \centering
 %autogenerated by aestest_affineinv via aestest_affineinv.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
- & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
+\diagbox{}{} & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
  \hline
 00 &05 & 4f & 91 & db & 2c & 66 & b8 & f2 & 57 & 1d & c3 & 89 & 7e & 34 & ea & a0 \\ 
  \hline
@@ -666,7 +680,8 @@ e0 &fb & b1 & 6f & 25 & d2 & 98 & 46 & 0c & a9 & e3 & 3d & 77 & 80 & ca & 14 & 5
  \hline
 f0 &5f & 15 & cb & 81 & 76 & 3c & e2 & a8 & 0d & 47 & 99 & d3 & 24 & 6e & b0 & fa \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 The pre-calculated values for the inverse affine transform are reported in Table \ref{tab:aesaffinetransforminvs}, and this output was automatically generated by the script   {aestest\_affineinv.sh}, which iterates through every input.  A single input can be evaluated by 
 \begin{lstlisting}[language=bash]
@@ -674,7 +689,7 @@ The pre-calculated values for the inverse affine transform are reported in Table
 source aesbash.sh
 aes_affineinv "01000010"
 \end{lstlisting}
-where ``01000010" is the function input, resulting in the output of ``00000011".
+where ``01000010'' is the function input, resulting in the output of ``00000011''.
 
 
 \subsection{Multiplicative Inversion Module}
@@ -712,7 +727,7 @@ The verification logic for the Multiplicative Inversion Module is reported in Ta
 source aesbash.sh
 aes_multiplicativeinversion "00000100"
 \end{lstlisting}
-where ``00000100" in the example above is the binary input representing 0x04.
+where ``00000100'' in the example above is the binary input representing 0x04.
 
 
 \begin{table}[t]
@@ -720,8 +735,9 @@ where ``00000100" in the example above is the binary input representing 0x04.
   \label{tab:aesmultiplicativeinversionmodule}
 \centering
 %autogenerated by aestest_multiplicativeinversion via aestest_multiplicativeinversion.sh
-\begin{tabular}{@{\hskip2pt}c@{\hskip2pt}@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|}
- & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|@{\hskip2pt}c@{\hskip2pt}|}
+\diagbox{}{} & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
  \hline
 00 &00 & 01 & 8d & f6 & cb & 52 & 7b & d1 & e8 & 4f & 29 & c0 & b0 & e1 & e5 & c7 \\ 
  \hline
@@ -755,7 +771,8 @@ e0 &b1 & 0d & d6 & eb & c6 & 0e & cf & ad & 08 & 4e & d7 & e3 & 5d & 50 & 1e & b
  \hline
 f0 &5b & 23 & 38 & 34 & 68 & 46 & 03 & 8c & dd & 9c & 7d & a0 & cd & 1a & 41 & 1c \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 
@@ -812,7 +829,7 @@ In equation (\ref{matrix:isomorph}), the input bit \(i_x\) is mapped to the isom
   = 
   \begin{pmatrix}
   \multicolumn{8}{c}{i_7 \oplus i_5} \\
-  \multicolumn{8}{c}{i_7 \oplus i_6 \oplus i_4 \oplus i_3 \oplus i_2 } \\
+  \multicolumn{8}{c}{i_7 \oplus i_6 \oplus i_4 \oplus i_3 \oplus i_2 \oplus i_1 } \\
   \multicolumn{8}{c}{i_7 \oplus i_5 \oplus i_3 \oplus i_2 } \\
   \multicolumn{8}{c}{i_7 \oplus i_5 \oplus i_3 \oplus i_2 \oplus i_1 } \\
   \multicolumn{8}{c}{i_7 \oplus i_6 \oplus i_2 \oplus i_1 } \\
@@ -821,13 +838,14 @@ In equation (\ref{matrix:isomorph}), the input bit \(i_x\) is mapped to the isom
   \multicolumn{8}{c}{i_6 \oplus i_1 \oplus i_0} \\
  \end{pmatrix},
 \end{equation}
-where each ``1" in the isomorphic field \(\delta\) corresponds to an XOR, which results in the logic shown in equation (\ref{matrix:isomorphimpl}).
+where each ``1'' in the isomorphic field \(\delta\) corresponds to an XOR, which results in the logic shown in equation (\ref{matrix:isomorphimpl}).
 \begin{table}[t]
  \caption{The pre-calculated isomorphic mapping module logic verification }
   \label{tab:aesisomorphicmodule}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
- & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
+\diagbox{}{} & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
  \hline
 00 &00 & 01 & 5f & 5e & 7c & 7d & 23 & 22 & 74 & 75 & 2b & 2a & 08 & 09 & 57 & 56 \\ 
  \hline
@@ -861,7 +879,8 @@ e0 &07 & 06 & 58 & 59 & 7b & 7a & 24 & 25 & 73 & 72 & 2c & 2d & 0f & 0e & 50 & 5
  \hline
 f0 &41 & 40 & 1e & 1f & 3d & 3c & 62 & 63 & 35 & 34 & 6a & 6b & 49 & 48 & 16 & 17 \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 The verification logic for the Isomorphic Mapping Module is reported in Table \ref{tab:aesisomorphicmodule}, and this output was automatically generated by the script   {aestest\_isomorphic.sh}, which iterates through every input.  A single input can be evaluated by 
 \begin{lstlisting}[language=bash]
@@ -869,7 +888,7 @@ The verification logic for the Isomorphic Mapping Module is reported in Table \r
 source aesbash.sh
 aes_isomorphic "00000100"
 \end{lstlisting}
-where ``00000100" in the example above is the binary input representing 0x04.
+where ``00000100'' in the example above is the binary input representing 0x04.
 
 \subsubsection{Inverse Isomorphic Module}
 In Figure \ref{fig:multiplicativeinversion}, the inputs to the isomorphic inversion unit are labeled as \(r_x\), where \(_x\) is the bit line number.  The outputs of the isomorphic unit are labelled as \(isio\).
@@ -899,7 +918,7 @@ In Figure \ref{fig:multiplicativeinversion}, the inputs to the isomorphic invers
   r_0 
  \end{pmatrix}
 \end{equation}
-In equation (\ref{matrix:invisomorph}), the input bit \(r_x\) is mapped to the isomorphic inversion field described by \(\delta^{-1}\), thus, \(io=\delta^{-1} \times i\).  This results in
+In equation (\ref{matrix:invisomorph}), the input bit \(r_x\) is mapped to the isomorphic inversion field described by \(\delta^{-1}\), thus, \(isio=\delta^{-1} \times r\).  This results in
 \begin{equation}
 \label{matrix:invisomorphimpl}
 \delta^{-1} \times r
@@ -926,15 +945,16 @@ In equation (\ref{matrix:invisomorph}), the input bit \(r_x\) is mapped to the i
   \multicolumn{8}{c}{r_6 \oplus r_5 \oplus r_4 \oplus r_2 \oplus r_0} \\
  \end{pmatrix}
 \end{equation}
-where each ``1" in the isomorphic field \(\delta^{-1}\) corresponds to an XOR, which results in the logic shown in equation (\ref{matrix:invisomorphimpl}).
+where each ``1'' in the isomorphic field \(\delta^{-1}\) corresponds to an XOR, which results in the logic shown in equation (\ref{matrix:invisomorphimpl}).
 
 \begin{table}[t]
  \caption{The pre-calculated inverse isomorphic mapping module logic verification }
   \label{tab:invaesisomorphicmodule}
 \centering
 %autogenerated by aestest_isomorphicinv via aestest_isomorphicinv.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
- & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
+\diagbox{}{} & 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ 
  \hline
 00 &00 & 01 & bc & bd & 5d & 5c & e1 & e0 & 0c & 0d & b0 & b1 & 51 & 50 & ed & ec \\ 
  \hline
@@ -968,15 +988,16 @@ e0 &ce & cf & 72 & 73 & 93 & 92 & 2f & 2e & c2 & c3 & 7e & 7f & 9f & 9e & 23 & 2
  \hline
 f0 &d1 & d0 & 6d & 6c & 8c & 8d & 30 & 31 & dd & dc & 61 & 60 & 80 & 81 & 3c & 3d \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
-The verification logic for the Inverse Isomorphic Mapping Module is reported in Table \ref{tab:invaesisomorphicmodule}, and this output was automatically generated by the script   {aestest\_invisomorphic.sh}, which iterates through every input.  A single input can be evaluated by 
+The verification logic for the Inverse Isomorphic Mapping Module is reported in Table \ref{tab:invaesisomorphicmodule}, and this output was automatically generated by the script   {aestest\_isomorphicinv.sh}, which iterates through every input.  A single input can be evaluated by 
 \begin{lstlisting}[language=bash]
 #!/bin/sh
 source aesbash.sh
 aes_isomorphicinv "00000100"
 \end{lstlisting}
-where ``00000100" in the example above is the binary input representing 0x04.
+where ``00000100'' in the example above is the binary input representing 0x04.
 
 
 \subsection{\(GF(2^4)\) Addition}
@@ -1031,7 +1052,7 @@ and this logic is implemented in Figure \ref{fig:gf22mul}.
   \label{tab:gf22mul}
 \centering
 \begin{tabular}{c|c|c|c|c|}
- & 0 & 1 & 2 & 3 \\ 
+\diagbox{}{} & 0 & 1 & 2 & 3 \\ 
  \hline
 0 &0 & 0 & 0 & 0 \\ 
  \hline
@@ -1050,11 +1071,11 @@ The verification of the logic for the \(GF(2^2)\) Multiplication Module is repor
 source aesbash.sh
 aes_multGF2 "0111"
 \end{lstlisting}
-where ``0111" in the example above is the binary input of \(a=\{0,1\}\) and \(b=\{1,1\}\) resulting in an output of \(k=\{1,1\}\).
+where ``0111'' in the example above is the binary input of \(a=\{0,1\}\) and \(b=\{1,1\}\) resulting in an output of \(k=\{1,1\}\).
 
 \subsection{\(GF(2^2)\) Multiplication by constant}
 \label{subsec:gf22constantmul}
-The multiplication by a constant, \(\varphi\), is a special case of the \(GF(2^2)\) Multiplication Module described in Section \ref{subsec:gf22mul}.  The constant \(\varphi=\{1,0\}\) is a fixed value on the ``b" input to \(GF(2^2)\) multiplication.  Starting from equation (\ref{equ:GFF22mul:mathfinal}), we can reduce the logic to
+The multiplication by a constant, \(\varphi\), is a special case of the \(GF(2^2)\) Multiplication Module described in Section \ref{subsec:gf22mul}.  The constant \(\varphi=\{1,0\}\) is a fixed value on the ``b'' input to \(GF(2^2)\) multiplication.  Starting from equation (\ref{equ:GFF22mul:mathfinal}), we can reduce the logic to
 \begin{align}
 \label{equ:GFF22mulconstant:mathfinal}
 k&=\left(a_1+a_0\right)x+a_1,
@@ -1098,15 +1119,16 @@ and this logic is implemented in the circuit illustrated in Figure \ref{fig:gf24
 source aesbash.sh
 aes_multGF24 "00100100"
 \end{lstlisting}
-where ``00100100" in the example above is the binary input of \(a=\{0,0,1,0\}\) and \(b=\{0,1,0,0\}\) resulting in an output of \(k=\{1,0,0,0\}\).
+where ``00100100'' in the example above is the binary input of \(a=\{0,0,1,0\}\) and \(b=\{0,1,0,0\}\) resulting in an output of \(k=\{1,0,0,0\}\).
 
 \begin{table}[t]
  \caption{The pre-calculated \(GF(2^4)\) Multiplication Module logic verification }
   \label{tab:mulGF24module}
 \centering
 %autogenerated by aestest_multGF24 via aestest_multGF24.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
- & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & a & b & c & d & e & f \\ 
+\diagbox{}{} & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & a & b & c & d & e & f \\ 
  \hline
 0 &0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 
  \hline
@@ -1140,7 +1162,8 @@ e &0 & e & 7 & 9 & 5 & b & 2 & c & a & 4 & d & 3 & f & 1 & 8 & 6 \\
  \hline
 f &0 & f & 5 & a & 1 & e & 4 & b & 2 & d & 7 & 8 & 3 & c & 6 & 9 \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[t]
@@ -1166,7 +1189,7 @@ The \(GF(2^4)\) Squaring Module operates one 4-bit input and results in a 4-bit 
 \label{equ:sqrGF24}
 k&=\underbrace{k_3k_2}_{k_H}\underbrace{k_1k_0}_{k_L}=\big(\underbrace{a_3a_2}_{\mathclap{a_H}} \underbrace{a_1a_0}_{\mathclap{a_L}}\big)^2\nonumber\\
 &={k_H}x+{k_L}=\left(a_Hx+a_L\right)^2\nonumber \\
-&=\left(a_Hb_H\right)x^2+\left(a_Hb_L+a_Lb_H\right)x + a_Lb_L \\
+&=\left(a_Ha_H\right)x^2+\left(a_Ha_L+a_La_H\right)x + a_La_L \\
 &={a_H}^2x^2+{a_L}^2.\nonumber
 \end{align}
 The naive approach would be to simply put the same values into the \(a\) and \(b\) inputs of the \(GF(2^4)\) Multiplication Module described in Section \ref{subsec:mulGF24}; however, the circuit complexity can be decreased using the reductions described in equation (\ref{eqn:GFdecomposition}).  The \(x^2\) term can be reduced by setting \(x^2=x+\varphi\), resulting in
@@ -1220,7 +1243,7 @@ which can be implemented as 4 XOR gates. The logic is implemented in the circuit
 source aesbash.sh
 aes_squarerGF24 "0100"
 \end{lstlisting}
-where ``0100" in the example above is the binary input of \(a=\{0,1,0,0\}\) resulting in an output of \(k=\{0,1,1,0\}\).
+where ``0100'' in the example above is the binary input of \(a=\{0,1,0,0\}\) resulting in an output of \(k=\{0,1,1,0\}\).
 
 \begin{figure}[t]
   \begin{center}
@@ -1243,13 +1266,15 @@ where ``0100" in the example above is the binary input of \(a=\{0,1,0,0\}\) resu
 \centering
 
 %autogenerated by aestest_squarerGF24 via aestest_sqrGF24.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
  \hline
 input & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & a & b & c & d & e & f \\ 
  \hline
 output & 0 & 1 & 3 & 2 & 6 & 7 & 5 & 4 & d & c & e & f & b & a & 8 & 9 \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 
@@ -1306,7 +1331,7 @@ The equations (\ref{equ:mulconGF24reducekh}) and (\ref{equ:mulconGF24reducekl}) 
 \scalebox{1}{
 \( k = \left\{
 \begin{array}{l}
-         k_3=a_3 \oplus a_2\\
+         k_3=a_2 \oplus a_0\\
          k_2=a_3 \oplus a_2 \oplus a_1 \oplus a_0\\
          k_1=a_3\\
          k_0=a_2\\
@@ -1321,7 +1346,7 @@ which can be implemented as 3 XOR gates because \(a_2 \oplus a_0\) occurs twice.
 source aesbash.sh
 aes_lambdamultiply "0100"
 \end{lstlisting}
-where ``0100" in the example above is the binary input of \(a=\{0,1,0,0\}\) resulting in an output of \(k=\{1,1,0,1\}\).
+where ``0100'' in the example above is the binary input of \(a=\{0,1,0,0\}\) resulting in an output of \(k=\{1,1,0,1\}\).
 
 \begin{figure}[t]
   \begin{center}
@@ -1342,13 +1367,15 @@ where ``0100" in the example above is the binary input of \(a=\{0,1,0,0\}\) resu
   \label{tab:lambdaGF24}
 \centering
 %autogenerated by aestest_lambdamultiply via aestest_lambdaGF24.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
  \hline
 input & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & a & b & c & d & e & f \\ 
  \hline
 output & 0 & c & 4 & 8 & d & 1 & 9 & 5 & 6 & a & 2 & e & b & 7 & f & 3 \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 
@@ -1367,10 +1394,10 @@ The \(GF(2^4)\) Inversion Module calculates the inversion of the input \(a\), wh
          {k_2}=&a_3a_2a_1 \oplus a_3a_2a_0 \oplus a_3a_0 \oplus a_2 \\
          & \oplus a_2a_1\\
          {k_1}=&a_3\oplus a_3a_2a_1 \oplus a_3a_1a_0 \oplus a_2 \\
-          & \oplus a_2a_2 \oplus a_1 \\
+          & \oplus a_2a_0 \oplus a_1 \\
          {k_0}=&a_3a_2a_1 \oplus a_3a_2a_0 \oplus a_3a_1\\
-           &a_3a_1a_0 \oplus a_3a_0\oplus a_2 \oplus a_2a_1\\
-           &a_2a_1a_0 \oplus a_1 \oplus a_0
+           & \oplus a_3a_1a_0 \oplus a_3a_0\oplus a_2 \oplus a_2a_1\\
+           & \oplus a_2a_1a_0 \oplus a_1 \oplus a_0
 \end{array}\right.
 \)
 }
@@ -1382,24 +1409,26 @@ which represents the circuit logic in lieu of a lookup table.  The verification 
 source aesbash.sh
 aes_invGF24 "0100"
 \end{lstlisting}
-where ``0100" in the example above is the binary input of \(a=\{0,1,0,0\}\) resulting in an output of \(k=\{1,1,1,1\}\).
+where ``0100'' in the example above is the binary input of \(a=\{0,1,0,0\}\) resulting in an output of \(k=\{1,1,1,1\}\).
 
 \begin{table}[t]
  \caption{The pre-calculated \(GF(2^4)\) inversion logic verification}
   \label{tab:invGF24}
 \centering
-%autogenerated by aestest_multinv24 via aestest_multinv24.sh
+%autogenerated by aestest_invGF24 via aestest_invGF24.sh
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|@{\hskip3pt}c@{\hskip3pt}|}
  \hline
 \(a\) & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & a & b & c & d & e & f \\ 
  \hline
 \(k^{-1}\) & 0 & 1 & 3 & 2 & f & c & 9 & b & a & 6 & 8 & 7 & 5 & e & d & 4 \\ 
  \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \section{Conclusion}
-The focus of this work was a reference S-Box for AES with a focus on the circuit implementation for the multiplicative inversion module.  The complete mathematical justification has been presented, and is complimented  a BASH script for logic verification that can be used for comparisons against outputs using SPICE.
+The focus of this work was a reference S-Box for AES with a focus on the circuit implementation for the multiplicative inversion module.  The complete mathematical justification has been presented, and is complemented by a BASH script for logic verification that can be used for comparisons against outputs using SPICE.
 
 \section*{Acknowledgment}
 This research was supported in part by an appointment to the Intelligence Community Postdoctoral Research Fellowship Program at the Georgia Institute of Technology, administered by Oak Ridge Institute for Science and Education through an interagency agreement between the U.S. Department of Energy and the Office of the Director of National Intelligence.
@@ -1408,7 +1437,7 @@ Brian Degnan would also like thank Ella Rose for her assistance in all things cr
 
 %
 %\section{AES Key Schedule}
-%The key schedule takes the original key derives the subkeys that are used in each round.  The AES key schedule is ``word" orient, where each word is 32-bits.  Words are denoted in the following sections by the term ``\(W\)".  
+%The key schedule takes the original key derives the subkeys that are used in each round.  The AES key schedule is ``word'' orient, where each word is 32-bits.  Words are denoted in the following sections by the term ``\(W\)''.  
 %
 %
 %\subsection{128-bit Key Schedule}
@@ -1433,7 +1462,7 @@ Brian Degnan would also like thank Ella Rose for her assistance in all things cr
 %source aesbash.sh
 %aes_roundconstant "01001101" "0"
 %\end{lstlisting}
-%where ``01001101" is the value for round 13, and ``0" makes the function count in an ascending order. The resulting output is ``10011010".  Changing the second argument to be a ``1" makes the round counter descend, which is used in decryption.   
+%where ``01001101'' is the value for round 13, and ``0'' makes the function count in an ascending order. The resulting output is ``10011010''.  Changing the second argument to be a ``1'' makes the round counter descend, which is used in decryption.   
 %
 %
 %\subsection{RotWord}
@@ -1448,7 +1477,7 @@ Brian Degnan would also like thank Ella Rose for her assistance in all things cr
 %data=$(bashUTILbin2hex $data)
 %echo "$data"
 %\end{lstlisting}
-%where ``0000000f" in the example above is the value of the 32-bit word to be rotated.  The result is ``00000f00".
+%where ``0000000f'' in the example above is the value of the 32-bit word to be rotated.  The result is ``00000f00''.
 %\section{Semiconductor Implementation}
 %
 \bibliographystyle{IEEEtran}

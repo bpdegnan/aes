@@ -2,3 +2,15 @@ notes.txt
 
 # Runtime-fetched, pinned dependency (see aes-sbox/emulate/aesbash.sh)
 aes-sbox/emulate/bashbignumbers.sh
+
+# LaTeX build artifacts (the aessbox.pdf output is intentionally tracked)
+aes-sbox/documentation/*.aux
+aes-sbox/documentation/*.bbl
+aes-sbox/documentation/*.blg
+aes-sbox/documentation/*.log
+aes-sbox/documentation/*.out
+aes-sbox/documentation/*.toc
+aes-sbox/documentation/*.fls
+aes-sbox/documentation/*.fdb_latexmk
+aes-sbox/documentation/*.synctex.gz
+aes-sbox/documentation/eps/*-eps-converted-to.pdf
